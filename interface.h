@@ -13,6 +13,8 @@ enum MY_INTERFACE
 	INTERFACE_FIND_LASTNAME,
 	INTERFACE_FIND_FACILITY,
 	INTERFACE_FIND_YEAR,
+	INTERFACE_SAVE,
+	INTERFACE_LOAD,
 	INTERFACE_STOP,
 	INTERFACE_TOT
 };
@@ -25,3 +27,5 @@ void menu(void* datastruct);
 void find_lastname();
 void find_year();
 void find_facility();
+void handleSave();
+void handleLoad();

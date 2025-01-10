@@ -12,7 +12,9 @@ static char* InterfaceOptions[] =
 	"4 - Find lastname",
 	"5 - Find facility",
 	"6 - Find year",
-	"7 - Finish",
+    "7 - Save to file",
+    "8 - Load from file",
+	"9 - Finish",
 };
 
 static char* getStringWithUnknownLength() {
@@ -56,9 +58,8 @@ void handlePush() {
     printf("\nInput student's facility ID according to table above and submit with ENTER: ");
     enum Schools facility;
     scanf_s("%d", &facility);
-    struct MY_STUDENT student = myStudentBuilder(surname, bornYear, facility);
-    push(currentStack, &student);
-    //printStudentInfo(currentStack->top->data);
+    struct MY_STUDENT *student = myStudentBuilder(surname, bornYear, facility);
+    push(currentStack, student);
     printf("\nPress any key to continue");
     getch();
     system("cls");
@@ -75,7 +76,7 @@ void handlePop() {
 void handleClear() {
     system("cls");
     printf("\nAttempting to clear stack ");
-    clear(currentStack);
+    clear(currentStack,&freeStudent);
     printf("\nPress any key to continue");
     getch();
     system("cls");
@@ -109,10 +110,7 @@ void menu(void* datastruct) {
         printf("----------------------\n");
         for (int i = 0; i < INTERFACE_TOT; i++)
         {
-            printf("\n%s\n", InterfaceOptions[i]);
-        }
-        if (currentStack->top != NULL) {
-            printStudentInfo(currentStack->top->data);
+            printf("\n%s", InterfaceOptions[i]);
         }
 
         printf("\nSelect action: ");
@@ -141,8 +139,14 @@ void menu(void* datastruct) {
             find_year();
             break;
         case INTERFACE_STOP:
-            clear(currentStack);
+            clear(currentStack, &freeStudent);
             flag = 0;
+            break;
+        case INTERFACE_SAVE:
+            handleSave();
+            break;
+        case INTERFACE_LOAD:
+            handleLoad();
             break;
         default:
             printf("\nUnknown action. Press any key to try again");
@@ -154,16 +158,35 @@ void menu(void* datastruct) {
     
 }
 
+void handleSave(){
+    printf("Saving to file");
+    saveStack(currentStack, &saveStudentToDisk);
+    printf("\nPress any key to continue");
+    getch();
+    system("cls");
+}
+
+void handleLoad(){
+    struct StackElement* tmp;
+    int len;
+    clear(currentStack, &freeStudent);
+    loadStudentsFromDisk(currentStack,&myStudentBuilder);
+    printf("Loaded from file");
+    printf("\nPress any key to continue");
+    getch();
+    system("cls");
+}
+
 void find_lastname() {
     
     system("cls");
     printf("\tFinding student in the stack\n");
     printf("-------------------------------------------\n");
-    printf("\ Input surname to search for: ");
+    printf("Input surname to search for: ");
     char* criterion = getStringWithUnknownLength();
     system("cls");
 
-    struct StackElement* result = (struct StackElement*) search(currentStack, &criterion, getBySurname);
+    struct StackElement* result = (struct StackElement*) search(currentStack, criterion, &getBySurname);
     if (result == NULL) {
         printf("\nNothing found");
     }
@@ -180,11 +203,11 @@ void find_year() {
     system("cls");
     printf("\tFinding student in the stack\n");
     printf("-------------------------------------------\n");
-    printf("Input surname to search for: ");
+    printf("Input student's year of born: ");
     int year;
     scanf_s("%d", &year);
     system("cls");
-    struct StackElement* result = (struct StackElement*)search(currentStack, &year, getByBorn);
+    struct StackElement* result = (struct StackElement*)search(currentStack, year, &getByBorn);
     if (result == NULL) {
         printf("\n Nothing found");
     }
@@ -206,7 +229,7 @@ void find_facility() {
     enum Schools facility;
     scanf_s("%d", &facility);
     system("cls");
-    struct StackElement* result = (struct StackElement*)search(currentStack, &facility, getByFacility);
+    struct StackElement* result = (struct StackElement*)search(currentStack, (int)facility, &getByFacility);
     if (result == NULL) {
         printf("\nNothing found");
     }

@@ -15,4 +15,4 @@ enum ErrorNotifications {
 	UnknownError,
 };
 
-void handleErrors();
+void handleErrors(void* prt, void* type);

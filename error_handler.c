@@ -2,22 +2,31 @@
 #include <signal.h>
 
 const char* errorMessages[] = {
-    "Nie mo¿na otworzyæ pliku",
+    "Nie mozna otworzyc pliku",
     "Plik Pusty - nie mo¿na odczytaæ",
     "Plik Nie istnieje",
-    "Brak uprawnieñ",
+    "Brak uprawnien",
     "Nie mo¿na utworzyæ pliku",
     "Brak pamiêci",
-    "B³¹d segmentacji",
-    "Nieznany b³¹d"
+    "Blad segmentacji",
+    "Nieznany blad"
 };
 
-void handleErrors() {
+void handleErrors(void* ptr, void* type) {
     system("color 4");
     system("cls");
     enum ErrorNotification message = mapErrnoToErrorNotification(errno);
     printf("%s", errorMessages[message]);
-    printf("Press any key to continue");
+    if (ptr != NULL && type!=NULL) {
+        if (strcmp((char*)type,"file")) {
+            if (ptr && ((FILE*)ptr)) {
+                fclose((FILE*)ptr);
+            }
+        }else if(strcmp((char*)type,"ptr")) { 
+            free(ptr);
+        }
+    }
+    printf("\nPress any key to continue");
     getch();
     system("color 7");
     system("cls");
@@ -28,16 +37,31 @@ enum ErrorNotifications mapErrnoToErrorNotification(int err) {
     switch (err) {
         case EIO:               
             notification = FileOpen;
+            break;
+
         case ENOENT:            
             notification = FileNotExist;
+            break;
+
         case EACCES:            
             notification =  NotAllowed;
+            break;
+
+        case EROFS:
+            notification = NotAllowed;
+            break;
         case EEXIST:         
             notification = CannotCreate;
+            break;
+
         case ENOMEM:            
             notification = NoMemory;
+            break;
+
         case SIGSEGV:           
             notification = SegmentationError;
+            break;
+
         default:
             notification = UnknownError; 
     }

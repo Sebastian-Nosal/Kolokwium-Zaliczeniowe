@@ -15,75 +15,108 @@ static char* schoolsNames[] = {
 
 static long lastPosition = 0;
 
-struct MY_STUDENT myStudentBuilder(char* surname, int bornYear, enum Schools facility) {
-	struct MY_STUDENT newStudent = {.surname=surname,.bornYear=bornYear,.facility=facility};
+struct MY_STUDENT* myStudentBuilder(char* surname, int bornYear, enum Schools facility) {
+	struct MY_STUDENT* newStudent = (struct MY_STUDENT*)malloc(sizeof(struct MY_STUDENT));
+
+	if (newStudent == NULL) {
+		handleErrors(NULL,NULL);
+		return NULL;
+	}
+
+	newStudent->surname = (char*)malloc(strlen(surname) + 1);
+	if (newStudent->surname == NULL) {
+		handleErrors(newStudent,"ptr");
+		return NULL;
+	}
+
+	strcpy_s(newStudent->surname, strlen(surname) + 1, surname);
+	newStudent->bornYear = bornYear;
+	newStudent->facility = facility;
+
 	return newStudent;
 }
 
-void saveStudentToDisk(void* student) {
-	struct MY_STUDENT* tmp = (struct MY_STUDENT*)student;
-	FILE* file = fopen(FILE_NAME, "wb");
-	if (file == NULL) {
-		handleErrors();
-		return;
+void freeStudent(void * ptr) {
+	struct MY_STUDENT* student = (struct MY_STUDENT*)ptr;
+	if (student!=NULL)
+	{
+		if (student->surname != NULL) {
+			free(student->surname);
+			student->surname = NULL;
+		}
+		free(student);
 	}
-	size_t surnameLength = strlen(tmp->surname) + 1; 
-	size_t result1 = fwrite(&surnameLength, sizeof(size_t), 1, file);
-	size_t result2 = fwrite(tmp->surname, sizeof(char), surnameLength, file);
-	size_t result3 = fwrite(&tmp->bornYear, sizeof(int), 1, file);
-	size_t result4 = fwrite(&tmp->facility, sizeof(enum Schools), 1, file);
-	if (result1 != 1||result2!=surnameLength||result3!=1||result4!=1) {
-		handleErrors();
-		fclose(file);
-		return;
-	}
-	else {
-		lastPosition = 0;
-		fclose(file);
-		printf("Saved to file stack.bin");
-	}
-
 }
 
-struct MY_STUDENT loadStudentFromDisk() {
-	struct MY_STUDENT student = {.surname = NULL, .bornYear=NULL};
+void saveStudentToDisk(FILE* file, void* data) {
+	struct MY_STUDENT* student = (struct MY_STUDENT*)data;
+	size_t surnameLength = strlen(student->surname) + 1;
 
-	FILE* file = fopen(FILE_NAME, "rb");
-	if (!file) {
-		handleErrors();
-		return student;
+	size_t result1 = fwrite(&surnameLength, sizeof(size_t), 1, file);
+	size_t result2 = fwrite(student->surname, sizeof(char), surnameLength, file);
+	size_t result3 = fwrite(&student->bornYear, sizeof(int), 1, file);
+	size_t result4 = fwrite(&student->facility, sizeof(enum Schools), 1, file);
+
+	if (result1 != 1 || result2 != surnameLength || result3 != 1 || result4 != 1) {
+		handleErrors(file,"file");
+	}
+}
+
+void loadStudentsFromDisk(struct Stack* stack, void* builder) {
+	FILE* file = fopen("file.bin", "rb");
+	if (file == NULL) {
+		handleErrors(NULL,NULL);
+		return;
 	}
 
-	if (lastPosition == 0) {
-		fseek(file, 0, SEEK_END);
-	}
-	else {
-		fseek(file, lastPosition, SEEK_SET);
-	}
-
-	long currentPosition = ftell(file);
-
-	if (currentPosition == 0) { 
-		fclose(file);
-		return student; 
+	size_t numElements;
+	size_t result = fread(&numElements, sizeof(size_t), 1, file);
+	if (result != 1) {
+		handleErrors(file,"file");
 	}
 
-	fseek(file, -(long)sizeof(size_t), SEEK_CUR);
-	size_t surnameLength;
-	fread(&surnameLength, sizeof(size_t), 1, file);
+	for (size_t i = 0; i < numElements; i++) {
+		size_t surnameLength;
+		result = fread(&surnameLength, sizeof(size_t), 1, file);
+		if (result != 1) {
+			handleErrors(file,"file");
+			return;
+		}
 
-	fseek(file, -(long)(sizeof(size_t) + surnameLength), SEEK_CUR);
-	student.surname = malloc(surnameLength);
-	fread(student.surname, sizeof(char), surnameLength, file);
+		char* surname = (char*)malloc(surnameLength);
+		if (surname == NULL) {
+			handleErrors(file,"file");
+			return;
+		}
 
-	fseek(file, -(long)(sizeof(size_t) + surnameLength + sizeof(int) + sizeof(enum Schools)), SEEK_CUR);
-	fread(&student.bornYear, sizeof(int), 1, file);
-	fread(&student.facility, sizeof(enum Schools), 1, file);
+		result = fread(surname, sizeof(char), surnameLength, file);
+		if (result != surnameLength) {
+			handleErrors(file,"file");
+			return;
+		}
 
-	lastPosition = ftell(file);
+		int bornYear;
+		result = fread(&bornYear, sizeof(int), 1, file);
+		if (result != 1) {
+			handleErrors(file,"file");
+			return;
+		}
+
+		enum Schools facility;
+		result = fread(&facility, sizeof(enum Schools), 1, file);
+		if (result != 1) {
+			handleErrors(file,"file");
+			return;
+		}
+
+		struct MY_STUDENT* newStudent = ((struct MY_STUDENT* (*)(char*, int, enum Schools))builder)(surname, bornYear, facility);
+
+		push(stack, newStudent);
+
+		free(surname);
+	}
 
 	fclose(file);
-	return student;
 }
 
 void printStudentInfo(void* student) {
@@ -97,9 +130,7 @@ void printStudentInfo(void* student) {
 
 int getBySurname(void* student, void* criteria) {
 	struct MY_STUDENT* pcur = (struct MY_STUDENT*)student;
-	//struct MY_STUDENT* psearch = (struct MY_STUDENT*)criteria;
-
-	//if (strcmp(pcur->surname, psearch->surname) == 0)
+	criteria = (char*)criteria;
 	if (strcmp(pcur->surname, criteria) == 0)
 		return 1;
 	return 0;
@@ -107,18 +138,18 @@ int getBySurname(void* student, void* criteria) {
 
 int getByFacility(void* student, void* criteria) {
 	struct MY_STUDENT* pcur = (struct MY_STUDENT*)student;
-	//struct MY_STUDENT* psearch = (struct MY_STUDENT*)criteria;
+	criteria = (int)criteria;
 
-	if (pcur->facility == criteria)//psearch->facility)
+	if (pcur->facility == criteria)
 		return 1;
 	return 0;
 }
 
 int getByBorn(void* student, void* criteria) {
 	struct MY_STUDENT* pcur = (struct MY_STUDENT*)student;
-	//struct MY_STUDENT* psearch = (struct MY_STUDENT*)criteria;
+	criteria = (int)criteria;
 
-	if (pcur->bornYear == criteria) // psearch->bornYear);
+	if (pcur->bornYear == criteria)
 		return 1;
 	return 0;
 }

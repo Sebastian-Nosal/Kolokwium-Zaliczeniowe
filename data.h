@@ -1,7 +1,8 @@
 #pragma once
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "stack.h";
+#include "error_handler.h"
 enum Schools {
 	WM,
 	WA,
@@ -14,17 +15,16 @@ enum Schools {
 	END,
 };
 
-
-
 struct MY_STUDENT {
 	char* surname;
 	int bornYear;
 	enum Schools facility;
 };
 
-struct MY_STUDENT myStudentBuilder(char* surname, int bornYear, enum Schools facility);
-void saveStudentToDisk(void *student);
-struct MY_STUDENT loadStudentFromDisk();
+struct MY_STUDENT* myStudentBuilder(char* surname, int bornYear, enum Schools facility);
+void saveStudentToDisk(FILE* file, void* data);
+void loadStudentsFromDisk(struct Stack* stack, void* builder);
+void freeStudent(void* ptr);
 void printStudentInfo(void* student);
 int getBySurname(void* student,void* criteria);
 int getByFacility(void* student,void* criteria);
