@@ -93,7 +93,6 @@ void handlePrint() {
 
     while (currentElement != NULL) {
         printStudentInfo(currentElement->data);
-        printf("*");
         currentElement = currentElement->next;
     }
     printf("\nPress any key to continue");

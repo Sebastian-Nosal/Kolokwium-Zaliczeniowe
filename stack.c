@@ -50,9 +50,9 @@ struct StackElement pop(struct Stack* stack) {
 	}
 
 	struct StackElement* topElement = stack->top;  
-	stack->top = topElement->next;  
-	stack->index--; 
+	stack->index--;
 	toReturn.data = stack->top->data;
+	stack->top = topElement->next;  
 	printf("Element removed from stack");
 	return toReturn;  
 }
